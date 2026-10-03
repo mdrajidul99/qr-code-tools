@@ -1,0 +1,6 @@
+{
+  "name": "QR Code Tools",
+  "description": "All-in-one free QR Code and Barcode toolkit. Generate, customize, download, and scan QR codes and barcodes client-side with zero login required.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
