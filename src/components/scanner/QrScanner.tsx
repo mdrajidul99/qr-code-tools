@@ -83,16 +83,6 @@ export const QrScanner: React.FC<QrScannerProps> = ({ onNotify, onBack }) => {
 
       stopCamera();
 
-      try {
-        const devices = await BrowserQRCodeReader.listVideoInputDevices();
-        setVideoDevices(devices);
-        if (!selectedDeviceId && devices.length > 0) {
-          setSelectedDeviceId(devices[0].deviceId);
-        }
-      } catch {
-        // ignore
-      }
-
       if (!codeReaderRef.current) {
         codeReaderRef.current = new BrowserQRCodeReader();
       }
@@ -104,8 +94,16 @@ export const QrScanner: React.FC<QrScannerProps> = ({ onNotify, onBack }) => {
         return;
       }
 
-      const controls = await codeReaderRef.current.decodeFromVideoDevice(
-        activeDevId,
+      // Constraints favoring rear/environment camera on smartphones
+      const constraints: MediaStreamConstraints = {
+        video: activeDevId
+          ? { deviceId: { exact: activeDevId } }
+          : { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      };
+
+      const controls = await codeReaderRef.current.decodeFromConstraints(
+        constraints,
         videoElem,
         (result) => {
           if (result) {
@@ -120,6 +118,18 @@ export const QrScanner: React.FC<QrScannerProps> = ({ onNotify, onBack }) => {
       controlsRef.current = controls;
       setIsCameraActive(true);
       setLoading(false);
+
+      // Enumerate camera devices after permission is granted
+      try {
+        const devices = await BrowserQRCodeReader.listVideoInputDevices();
+        setVideoDevices(devices);
+        if (!selectedDeviceId && devices.length > 0) {
+          const preferred = devices.find(d => /back|rear|environment/i.test(d.label)) || devices[0];
+          setSelectedDeviceId(preferred.deviceId);
+        }
+      } catch {
+        // ignore enumeration issues
+      }
     } catch (err: unknown) {
       const errObj = err as Error;
       setLoading(false);
@@ -127,6 +137,10 @@ export const QrScanner: React.FC<QrScannerProps> = ({ onNotify, onBack }) => {
       if (errObj.name === 'NotAllowedError' || errObj.name === 'PermissionDeniedError') {
         setCameraPermissionDenied(true);
         setErrorMsg('Camera permission was denied. You can grant access in your browser settings or upload an image file instead.');
+      } else if (errObj.name === 'NotFoundError' || errObj.name === 'DevicesNotFoundError') {
+        setErrorMsg('No camera device was found on this device. Please use the image upload option.');
+      } else if (errObj.name === 'NotReadableError' || errObj.name === 'TrackStartError') {
+        setErrorMsg('Camera is currently in use by another application. Please close other camera apps and try again.');
       } else {
         setErrorMsg(errObj.message || 'Unable to open camera. Please use the file upload option.');
       }
@@ -377,93 +391,99 @@ export const QrScanner: React.FC<QrScannerProps> = ({ onNotify, onBack }) => {
           {/* TAB 2: Camera Scanner */}
           {scanMode === 'camera' && (
             <div className="space-y-4">
-              {!isCameraActive ? (
-                <div className="p-8 text-center flex flex-col items-center justify-center rounded-xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800">
-                  <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
-                    <Camera className="w-6 h-6" />
+              {/* Camera Controls Bar (visible when camera is active) */}
+              {isCameraActive && (
+                <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                      Camera Active
+                    </span>
                   </div>
-                  <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">
-                    Scan via Live Camera
-                  </h3>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-md mt-1 mb-4">
-                    Camera permissions are requested only after clicking below. Your camera frames are processed directly inside your browser.
-                  </p>
 
-                  <button
-                    type="button"
-                    onClick={() => startCamera()}
-                    disabled={loading}
-                    className="flex items-center gap-2 px-5 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold shadow-sm transition-colors cursor-pointer min-h-[44px]"
-                  >
-                    <Camera className="w-4 h-4" />
-                    <span>{loading ? 'Requesting Access...' : 'Open Camera'}</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Camera Controls Bar */}
-                  <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="font-medium text-neutral-700 dark:text-neutral-300">
-                        Camera Active
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {videoDevices.length > 1 && (
-                        <select
-                          value={selectedDeviceId}
-                          onChange={(e) => {
-                            setSelectedDeviceId(e.target.value);
-                            startCamera(e.target.value);
-                          }}
-                          className="px-2.5 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white text-xs"
-                        >
-                          {videoDevices.map((dev, idx) => (
-                            <option key={dev.deviceId} value={dev.deviceId}>
-                              {dev.label || `Camera ${idx + 1}`}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={stopCamera}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 cursor-pointer"
+                  <div className="flex items-center gap-2">
+                    {videoDevices.length > 1 && (
+                      <select
+                        value={selectedDeviceId}
+                        onChange={(e) => {
+                          setSelectedDeviceId(e.target.value);
+                          startCamera(e.target.value);
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white text-xs"
                       >
-                        <VideoOff className="w-3.5 h-3.5" />
-                        <span>Stop Camera</span>
-                      </button>
-                    </div>
-                  </div>
+                        {videoDevices.map((dev, idx) => (
+                          <option key={dev.deviceId} value={dev.deviceId}>
+                            {dev.label || `Camera ${idx + 1}`}
+                          </option>
+                        ))}
+                      </select>
+                    )}
 
-                  {/* Video Viewport with Targeting Overlay */}
-                  <div className="relative rounded-xl overflow-hidden bg-black aspect-video max-h-[360px] flex items-center justify-center">
-                    <video
-                      ref={videoRef}
-                      className="w-full h-full object-cover"
-                      playsInline
-                      muted
-                      autoPlay
-                    />
-
-                    {/* Scan reticle overlay */}
-                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                      <div className="w-48 h-48 sm:w-56 sm:h-56 border-2 border-blue-500/80 rounded-2xl relative shadow-[0_0_0_9999px_rgba(0,0,0,0.4)]">
-                        <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-blue-400 rounded-tl-lg" />
-                        <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-blue-400 rounded-tr-lg" />
-                        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-blue-400 rounded-bl-lg" />
-                        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-blue-400 rounded-br-lg" />
-                        <div className="absolute inset-x-2 top-0 h-0.5 bg-blue-400 shadow-[0_0_8px_#3b82f6] animate-pulse" />
-                      </div>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={stopCamera}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 cursor-pointer"
+                    >
+                      <VideoOff className="w-3.5 h-3.5" />
+                      <span>Stop Camera</span>
+                    </button>
                   </div>
-                  <p className="text-center text-xs text-neutral-500">
-                    Align the QR code within the frame to decode automatically.
-                  </p>
                 </div>
+              )}
+
+              {/* Video Viewport Container with Persistent Video Element */}
+              <div className="relative rounded-xl overflow-hidden bg-neutral-950 aspect-video max-h-[360px] flex items-center justify-center border border-neutral-200 dark:border-neutral-800">
+                <video
+                  ref={videoRef}
+                  className="w-full h-full object-cover"
+                  playsInline
+                  muted
+                  autoPlay
+                />
+
+                {/* Inactive Prompt Overlay with "Open Camera" button */}
+                {!isCameraActive && (
+                  <div className="absolute inset-0 z-10 p-6 text-center flex flex-col items-center justify-center bg-neutral-50 dark:bg-neutral-950">
+                    <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
+                      <Camera className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">
+                      Scan via Live Camera
+                    </h3>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-md mt-1 mb-4">
+                      Camera permissions are requested only after clicking below. Your camera frames are processed directly inside your browser.
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => startCamera()}
+                      disabled={loading}
+                      className="flex items-center gap-2 px-5 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold shadow-sm transition-colors cursor-pointer min-h-[44px]"
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span>{loading ? 'Opening Camera...' : 'Open Camera'}</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Scan Reticle Overlay (Active state) */}
+                {isCameraActive && (
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    <div className="w-48 h-48 sm:w-56 sm:h-56 border-2 border-blue-500/80 rounded-2xl relative shadow-[0_0_0_9999px_rgba(0,0,0,0.4)]">
+                      <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-blue-400 rounded-tl-lg" />
+                      <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-blue-400 rounded-tr-lg" />
+                      <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-blue-400 rounded-bl-lg" />
+                      <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-blue-400 rounded-br-lg" />
+                      <div className="absolute inset-x-2 top-0 h-0.5 bg-blue-400 shadow-[0_0_8px_#3b82f6] animate-pulse" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {isCameraActive && (
+                <p className="text-center text-xs text-neutral-500 dark:text-neutral-400">
+                  Align the QR code within the frame to decode automatically.
+                </p>
               )}
             </div>
           )}

@@ -134,16 +134,6 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onNotify, onBack
 
       stopCamera();
 
-      try {
-        const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-        setVideoDevices(devices);
-        if (!selectedDeviceId && devices.length > 0) {
-          setSelectedDeviceId(devices[0].deviceId);
-        }
-      } catch {
-        // ignore
-      }
-
       if (!multiReaderRef.current) {
         multiReaderRef.current = new BrowserMultiFormatReader();
       }
@@ -155,8 +145,16 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onNotify, onBack
         return;
       }
 
-      const controls = await multiReaderRef.current.decodeFromVideoDevice(
-        activeDevId,
+      // Constraints favoring rear/environment camera on smartphones
+      const constraints: MediaStreamConstraints = {
+        video: activeDevId
+          ? { deviceId: { exact: activeDevId } }
+          : { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      };
+
+      const controls = await multiReaderRef.current.decodeFromConstraints(
+        constraints,
         videoElem,
         (result) => {
           if (result) {
@@ -171,6 +169,18 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onNotify, onBack
       controlsRef.current = controls;
       setIsCameraActive(true);
       setLoading(false);
+
+      // Enumerate camera devices after permission is granted
+      try {
+        const devices = await BrowserMultiFormatReader.listVideoInputDevices();
+        setVideoDevices(devices);
+        if (!selectedDeviceId && devices.length > 0) {
+          const preferred = devices.find(d => /back|rear|environment/i.test(d.label)) || devices[0];
+          setSelectedDeviceId(preferred.deviceId);
+        }
+      } catch {
+        // ignore enumeration issues
+      }
     } catch (err: unknown) {
       const errObj = err as Error;
       setLoading(false);
@@ -178,8 +188,12 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onNotify, onBack
       if (errObj.name === 'NotAllowedError' || errObj.name === 'PermissionDeniedError') {
         setCameraPermissionDenied(true);
         setErrorMsg('Camera permission was denied. You can upload an image file instead or allow camera permissions in your browser settings.');
+      } else if (errObj.name === 'NotFoundError' || errObj.name === 'DevicesNotFoundError') {
+        setErrorMsg('No camera device was found on this device. Please use the image upload option.');
+      } else if (errObj.name === 'NotReadableError' || errObj.name === 'TrackStartError') {
+        setErrorMsg('Camera is currently in use by another application. Please close other camera apps and try again.');
       } else {
-        setErrorMsg(errObj.message || 'Unable to start camera.');
+        setErrorMsg(errObj.message || 'Unable to open camera. Please use the image upload option.');
       }
     }
   };
@@ -413,89 +427,95 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onNotify, onBack
           {/* TAB 2: Camera Scanner */}
           {scanMode === 'camera' && (
             <div className="space-y-4">
-              {!isCameraActive ? (
-                <div className="p-8 text-center flex flex-col items-center justify-center rounded-xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800">
-                  <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
-                    <Camera className="w-6 h-6" />
+              {/* Controls Bar (visible when camera is active) */}
+              {isCameraActive && (
+                <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                      Camera Active
+                    </span>
                   </div>
-                  <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">
-                    Scan Barcodes with Live Camera
-                  </h3>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-md mt-1 mb-4">
-                    Position the red guide line across the barcode lines. Processing runs 100% locally in your browser.
-                  </p>
 
-                  <button
-                    type="button"
-                    onClick={() => startCamera()}
-                    disabled={loading}
-                    className="flex items-center gap-2 px-5 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold shadow-sm transition-colors cursor-pointer min-h-[44px]"
-                  >
-                    <Camera className="w-4 h-4" />
-                    <span>{loading ? 'Opening Camera...' : 'Open Camera'}</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Controls Bar */}
-                  <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="font-medium text-neutral-700 dark:text-neutral-300">
-                        Camera Active
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {videoDevices.length > 1 && (
-                        <select
-                          value={selectedDeviceId}
-                          onChange={(e) => {
-                            setSelectedDeviceId(e.target.value);
-                            startCamera(e.target.value);
-                          }}
-                          className="px-2.5 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white text-xs"
-                        >
-                          {videoDevices.map((dev, idx) => (
-                            <option key={dev.deviceId} value={dev.deviceId}>
-                              {dev.label || `Camera ${idx + 1}`}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={stopCamera}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 cursor-pointer"
+                  <div className="flex items-center gap-2">
+                    {videoDevices.length > 1 && (
+                      <select
+                        value={selectedDeviceId}
+                        onChange={(e) => {
+                          setSelectedDeviceId(e.target.value);
+                          startCamera(e.target.value);
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white text-xs"
                       >
-                        <VideoOff className="w-3.5 h-3.5" />
-                        <span>Stop Camera</span>
-                      </button>
-                    </div>
-                  </div>
+                        {videoDevices.map((dev, idx) => (
+                          <option key={dev.deviceId} value={dev.deviceId}>
+                            {dev.label || `Camera ${idx + 1}`}
+                          </option>
+                        ))}
+                      </select>
+                    )}
 
-                  {/* Video Box with Linear Barcode Laser Guide */}
-                  <div className="relative rounded-xl overflow-hidden bg-black aspect-video max-h-[360px] flex items-center justify-center">
-                    <video
-                      ref={videoRef}
-                      className="w-full h-full object-cover"
-                      playsInline
-                      muted
-                      autoPlay
-                    />
-
-                    {/* Linear Barcode Target Guide */}
-                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                      <div className="w-[80%] max-w-md h-32 border-2 border-red-500/70 rounded-lg relative flex items-center shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]">
-                        <div className="w-full h-0.5 bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse" />
-                      </div>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={stopCamera}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 cursor-pointer"
+                    >
+                      <VideoOff className="w-3.5 h-3.5" />
+                      <span>Stop Camera</span>
+                    </button>
                   </div>
-                  <p className="text-center text-xs text-neutral-500">
-                    Align the red line perpendicular across the barcode bars to decode.
-                  </p>
                 </div>
+              )}
+
+              {/* Video Box with Linear Barcode Laser Guide */}
+              <div className="relative rounded-xl overflow-hidden bg-neutral-950 aspect-video max-h-[360px] flex items-center justify-center border border-neutral-200 dark:border-neutral-800">
+                <video
+                  ref={videoRef}
+                  className="w-full h-full object-cover"
+                  playsInline
+                  muted
+                  autoPlay
+                />
+
+                {/* Inactive Prompt Overlay with "Open Camera" button */}
+                {!isCameraActive && (
+                  <div className="absolute inset-0 z-10 p-6 text-center flex flex-col items-center justify-center bg-neutral-50 dark:bg-neutral-950">
+                    <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
+                      <Camera className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">
+                      Scan Barcodes with Live Camera
+                    </h3>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-md mt-1 mb-4">
+                      Position the red guide line across the barcode lines. Processing runs 100% locally in your browser.
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => startCamera()}
+                      disabled={loading}
+                      className="flex items-center gap-2 px-5 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold shadow-sm transition-colors cursor-pointer min-h-[44px]"
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span>{loading ? 'Opening Camera...' : 'Open Camera'}</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Linear Barcode Target Guide (Active state) */}
+                {isCameraActive && (
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    <div className="w-[80%] max-w-md h-32 border-2 border-red-500/70 rounded-lg relative flex items-center shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]">
+                      <div className="w-full h-0.5 bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {isCameraActive && (
+                <p className="text-center text-xs text-neutral-500 dark:text-neutral-400">
+                  Align the red line perpendicular across the barcode bars to decode.
+                </p>
               )}
             </div>
           )}
