@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Theme } from '../../utils/theme';
 import { Sun, Moon, Menu, X, QrCode, Barcode, Scan, Camera } from 'lucide-react';
+import logoImg from '../../assets/logo.png';
 
 export type ActivePage =
   | 'home'
@@ -57,9 +58,8 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center bg-blue-600/10 dark:bg-blue-500/10 border border-blue-600/20 shrink-0">
             {!logoError ? (
               <img
-                src="https://pxdrop.online/raw/db076oq81qec73f6ohi0"
+                src={logoImg}
                 alt="QR Code Tools Logo"
-                referrerPolicy="no-referrer"
                 onError={() => setLogoError(true)}
                 className="w-8 h-8 object-contain"
               />

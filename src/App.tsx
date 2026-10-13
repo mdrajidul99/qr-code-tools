@@ -12,6 +12,7 @@ import { TermsPage } from './components/pages/TermsPage';
 import { ContactPage } from './components/pages/ContactPage';
 import { Toast } from './components/common/Toast';
 import { getInitialTheme, applyTheme, Theme } from './utils/theme';
+import { initSourceProtection } from './utils/security';
 
 export function App() {
   const [theme, setTheme] = useState<Theme>('light');
@@ -26,6 +27,15 @@ export function App() {
     const initial = getInitialTheme();
     setTheme(initial);
     applyTheme(initial);
+
+    // Initialize client-side source code protection
+    const cleanupSecurity = initSourceProtection((msg) => {
+      setToast({ message: msg, type: 'info' });
+    });
+
+    return () => {
+      cleanupSecurity();
+    };
   }, []);
 
   const toggleTheme = () => {
