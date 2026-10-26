@@ -40,6 +40,9 @@ jobs:
       - name: Ensure .nojekyll in dist
         run: touch dist/.nojekyll
 
+      - name: Add CNAME to dist
+        run: echo "www.qr-code-tools.2bd.net" > dist/CNAME
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
