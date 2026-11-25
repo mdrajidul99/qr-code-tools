@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ActivePage } from './Header';
-import { ArrowUp, Mail, ShieldCheck, QrCode } from 'lucide-react';
+import { ArrowUp, Mail, ShieldCheck, QrCode, ExternalLink } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 
 interface FooterProps {
@@ -19,12 +19,39 @@ export const Footer: React.FC<FooterProps> = ({ setActivePage }) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const ecosystemLinks = [
+    {
+      label: 'Official Website & App Hub',
+      href: 'https://mrs-engineersbd.blogspot.com/',
+    },
+    {
+      label: 'CodeGuard',
+      href: 'https://code-guard.2bd.net/',
+    },
+    {
+      label: 'YouTube',
+      href: 'https://youtube.com/@mrs-engineersbd',
+    },
+    {
+      label: 'Facebook',
+      href: 'https://www.facebook.com/p/MRS-Engineers-BD-61594304166361/',
+    },
+    {
+      label: 'Telegram',
+      href: 'https://t.me/mrsengbd',
+    },
+    {
+      label: 'GitHub',
+      href: 'https://github.com/mdrajidul99',
+    },
+  ];
+
   return (
     <footer className="border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-600 dark:text-neutral-400 text-sm transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
           {/* Brand Info */}
-          <div className="md:col-span-1 space-y-4">
+          <div className="space-y-4">
             <button
               onClick={() => handleNav('home')}
               className="flex items-center gap-2.5 group text-left focus:outline-none"
@@ -136,25 +163,49 @@ export const Footer: React.FC<FooterProps> = ({ setActivePage }) => {
             </ul>
           </div>
 
-          {/* Developer Contact */}
+          {/* MRS Engineers BD Ecosystem */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-white mb-4">
-              Developer Information
+              MRS Engineers BD Ecosystem
             </h4>
             <div className="space-y-3 text-xs leading-relaxed">
-              <p className="font-medium text-neutral-800 dark:text-neutral-200">
-                MRS Engineers BD
+              <p className="text-neutral-700 dark:text-neutral-300">
+                Developed &amp; Maintained by{' '}
+                <a
+                  href="https://mrs-engineersbd.blogspot.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  MRS Engineers BD
+                </a>
               </p>
-              <a
-                href="mailto:mrs.engineers.bd26@gmail.com"
-                className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline break-all"
-              >
-                <Mail className="w-3.5 h-3.5 shrink-0" />
-                <span>mrs.engineers.bd26@gmail.com</span>
-              </a>
-              <p className="text-neutral-500 dark:text-neutral-400">
-                Created with zero user tracking and no login requirements. Open for personal and commercial usage.
-              </p>
+
+              <ul className="space-y-2">
+                {ecosystemLinks.map((link) => (
+                  <li key={link.label}>
+                    <a
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                    >
+                      <span>{link.label}</span>
+                      <ExternalLink className="w-3 h-3 shrink-0 opacity-70" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="pt-1">
+                <a
+                  href="mailto:mrs.engineers.bd26@gmail.com"
+                  className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline break-all"
+                >
+                  <Mail className="w-3.5 h-3.5 shrink-0" />
+                  <span>mrs.engineers.bd26@gmail.com</span>
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -162,7 +213,7 @@ export const Footer: React.FC<FooterProps> = ({ setActivePage }) => {
         {/* Bottom bar */}
         <div className="pt-8 border-t border-neutral-100 dark:border-neutral-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-500">
           <p>
-            © {new Date().getFullYear()} QR Code Tools by MRS Engineers BD. All rights reserved.
+            © 2026 MRS Engineers BD. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <button

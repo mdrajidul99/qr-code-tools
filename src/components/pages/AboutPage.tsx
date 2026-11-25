@@ -1,7 +1,7 @@
 import React from 'react';
 import { ActivePage } from '../layout/Header';
 import { BackButton } from '../common/BackButton';
-import { ShieldCheck, Sparkles, Mail, CheckCircle2, ArrowRight } from 'lucide-react';
+import { ShieldCheck, Sparkles, CheckCircle2, ArrowRight, ExternalLink } from 'lucide-react';
 
 interface AboutPageProps {
   setActivePage: (page: ActivePage) => void;
@@ -31,7 +31,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ setActivePage, onBack }) =
             <span>Our Mission</span>
           </h2>
           <p>
-            QR Code Tools was created to provide ordinary users, businesses, educators, and developers with an all-in-one utility that requires no technical hurdles, no account creation, no subscriptions, and no invasive tracking.
+            <strong>QR Code Tools</strong> is an official, 100% client-side (privacy-first) utility developed and maintained by <strong>MRS Engineers BD</strong>. It was created to provide ordinary users, businesses, educators, and developers with an all-in-one toolkit that requires no technical hurdles, no account creation, no subscriptions, and no invasive tracking.
           </p>
           <p>
             Many modern QR and barcode websites lock basic features like high-resolution downloads, color customization, or SVG export behind paywalls or forced user logins. QR Code Tools removes all those obstacles, keeping every generator and scanner completely open and free.
@@ -88,11 +88,31 @@ export const AboutPage: React.FC<AboutPageProps> = ({ setActivePage, onBack }) =
 
         <section className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-6 space-y-3">
           <h2 className="text-base font-bold text-neutral-900 dark:text-white">
-            Developer Information
+            Developer Information &amp; Official Ecosystem
           </h2>
           <p>
-            <strong>Developer:</strong> MRS Engineers BD
+            <strong>QR Code Tools</strong> is an official 100% client-side, privacy-first application by <strong>MRS Engineers BD</strong>.
           </p>
+          <div className="flex flex-wrap gap-3 pt-1">
+            <a
+              href="https://mrs-engineersbd.blogspot.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-xs font-medium transition-colors"
+            >
+              <span>Official Website (MRS Engineers BD)</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+            <a
+              href="https://code-guard.2bd.net/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-xs font-medium transition-colors"
+            >
+              <span>CodeGuard</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
           <p>
             <strong>Contact Email:</strong>{' '}
             <a
