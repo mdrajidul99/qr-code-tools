@@ -25,7 +25,7 @@
     <meta name="twitter:description" content="All-in-one free QR Code and Barcode toolkit. Generate, customize, download, and scan QR codes and barcodes client-side with zero login required." />
     <meta name="twitter:image" content="https://qr-code-tools.2bd.net/logo.png" />
 
-    <!-- Fonts: Inter / Plus Jakarta Sans -->
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet" />
@@ -60,6 +60,21 @@
         ]
       }
     }
+    </script>
+
+    <!-- সিকিউরিটি স্ক্রিপ্ট -->
+    <script>
+      // বট ডিটেকশন ও স্ক্র্যাপিং প্রটেকশন
+      (function() {
+        if (navigator.webdriver) {
+          window.location.href = "about:blank";
+        }
+      })();
+      // রাইট ক্লিক ও সোর্স ভিউ ব্লক করা
+      document.addEventListener('contextmenu', event => event.preventDefault());
+      document.onkeydown = function(e) {
+        if(e.keyCode == 123 || (e.ctrlKey && e.shiftKey && e.keyCode == 73)) return false;
+      };
     </script>
   </head>
   <body class="bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 antialiased selection:bg-blue-600 selection:text-white transition-colors duration-200">
